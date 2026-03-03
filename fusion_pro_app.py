@@ -452,9 +452,19 @@ for t in active:
 # Dodaj to na początku sekcji 8 w fusion_pro_app.py
 if auto_trade:
     add_log(f"DEBUG: Skaner aktywny, Sentyment: {market_guard}")
+# =====================================================
+# 8. AUTO-TRADING (Z blokadą duplikatów)
+# =====================================================
 if auto_trade and scan_results and market_guard == "SAFE":
-
+    # Pobieramy symbole obecnie otwartych pozycji
+    current_symbols = [t["symbol"] for t in st.session_state.journal if t["status"] == "OPEN"]
+    
     for _, row in df_s.head(mode_params["max_positions"]).iterrows():
+        symbol = row["Symbol"]
+
+        # BLOKADA DUPLIKATÓW: Jeśli już mamy tę akcję, pomiń ją
+        if symbol in current_symbols:
+            continue
 
         # FILTR wolumenu
         if row["Vol"] < mode_params["vol_limit"]:
@@ -462,15 +472,13 @@ if auto_trade and scan_results and market_guard == "SAFE":
 
         # FILTR trendu + RSI
         side = None
-
         if row["Trend"] == "UP" and row["RSI"] < mode_params["rsi_max_long"]:
             side = "Long"
-
-        if row["Trend"] == "DOWN" and row["RSI"] > mode_params["rsi_min_short"]:
+        elif row["Trend"] == "DOWN" and row["RSI"] > mode_params["rsi_min_short"]:
             side = "Short"
 
         if side:
-            execute_trade(row["Symbol"], row["Cena"], side, risk_v, sl_v, tp_v, row["data"])
+            execute_trade(symbol, row["Cena"], side, risk_v, sl_v, tp_v, row["data"])
 # =====================================================
 # 9. PORTFEL – STATYSTYKI GŁÓWNE
 # =====================================================
