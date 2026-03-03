@@ -238,8 +238,7 @@ for s in ASSETS:
 if scan_results:
     df_s = pd.DataFrame(scan_results).sort_values("Vol", ascending=False)
     st.subheader("🔍 TOP 5 AKTYWÓW (wg wolumenu)")
-    st.dataframe(df_s[["Symbol", "Cena", "Vol", "RSI", "Trend"]].head(5),
-                 use_container_width=True)
+    st.dataframe(df_s[["Symbol", "Cena", "Vol", "RSI", "Trend"]].head(5), width='stretch')
 
 # =====================================================
 # 6B. WYKRES (ŚWIECE + WOLUMEN + ORACLE PATH)
@@ -291,8 +290,8 @@ if scan_results:
     ), row=2, col=1)
 
     fig.update_layout(template="plotly_dark", height=600, xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, use_container_width=True)
-
+    st.plotly_chart(fig, width='stretch')
+    
     # Manual trading buttons
     cA, cB = st.columns(2)
     if cA.button(f"🟢 KUP LONG: {target}"):
@@ -503,7 +502,7 @@ if not history_df.empty:
         ))
 
         fig_eq.update_layout(template="plotly_dark", height=350)
-        st.plotly_chart(fig_eq, use_container_width=True)
+        st.plotly_chart(fig_eq, width='stretch')
 
     except:
         st.warning("⚠️ Nie udało się załadować historii transakcji.")
@@ -522,7 +521,7 @@ with st.expander("Pokaż logi", expanded=False):
 
 st.sidebar.divider()
 
-if st.sidebar.button("🚨 Reset systemu (czyści pamięć)", use_container_width=True):
+if st.sidebar.button("🚨 Reset systemu (czyści pamięć)", width='stretch'):
     st.session_state.journal = []
     st.session_state.logs = []
     st.session_state.notified_symbols = set()
