@@ -375,11 +375,27 @@ for t in active:
                 add_log(f"{t['symbol']} -> BreakEven aktywowany")
 
         # Trailing Stop
-        if trailing_toggle:
-            if t["side"] == "Long" and curr_px > t["high_seen"]:
-                t["high_seen"] = curr_px
-                if not t["be_active"]:
-                    t["sl"] = round(curr_px * (1 - sl_v/100), 4)
+        # Trailing Stop (nowy, płynny mechanizm)
+if trailing_toggle:
+    if t["side"] == "Long":
+        if curr_px > t["high_seen"]:
+            t["high_seen"] = curr_px
+            # Obliczamy nowy potencjalny SL (np. 1.5% poniżej szczytu)
+            new_sl = round(curr_px * (1 - sl_v/100), 4)
+            # Podnosimy SL tylko, jeśli nowy jest wyższy od obecnego
+            if new_sl > t["sl"]:
+                t["sl"] = new_sl
+                add_log(f"📈 Trailing UP: {t['symbol']} SL na {t['sl']}")
+
+    elif t["side"] == "Short":
+        # Dla Short szukamy najniższej ceny (low_seen)
+        if curr_px < t["high_seen"]: # w kodzie używasz high_seen jako ekstremum
+            t["high_seen"] = curr_px
+            new_sl = round(curr_px * (1 + sl_v/100), 4)
+            # Obniżamy SL tylko, jeśli nowy jest niższy od obecnego
+            if new_sl < t["sl"]:
+                t["sl"] = new_sl
+                add_log(f"📉 Trailing DOWN: {t['symbol']} SL na {t['sl']}")
 
             elif t["side"] == "Short" and curr_px < t["high_seen"]:
                 t["high_seen"] = curr_px
