@@ -3,9 +3,5 @@ pandas
 numpy
 yfinance
 plotly
-websocket-client
 requests
-websockets
-datetime
 scikit-learn
-matplotlib
