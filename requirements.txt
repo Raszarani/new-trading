@@ -4,3 +4,4 @@ numpy
 yfinance
 plotly
 requests
+scikit-learn
