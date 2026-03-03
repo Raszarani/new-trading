@@ -451,8 +451,8 @@ for t in active:
 # =====================================================
 
 # Dodaj to na początku sekcji 8 w fusion_pro_app.py
-if auto_trade:
-    add_log(f"DEBUG: Skaner aktywny, Sentyment: {market_guard}")
+#if auto_trade:
+#    add_log(f"DEBUG: Skaner aktywny, Sentyment: {market_guard}")
 # =====================================================
 # 8. AUTO-TRADING (Z blokadą duplikatów)
 # =====================================================
