@@ -197,6 +197,53 @@ def get_mode_params(mode):
             "rsi_min_short": 30,
             "trend_strict": False
         }
+        def execute_trade(symbol, price, side, risk_percent, sl_percent, tp_percent, data):
+    # Sprawdzenie limitu pozycji
+    active_positions = [t for t in st.session_state.journal if t["status"] == "OPEN"]
+    if len(active_positions) >= MAX_POSITIONS:
+        return
+
+    # Obliczenia wielkości pozycji (prosty model)
+    # Ryzyko oparte na procencie balansu konta
+    risk_amount_pln = st.session_state.balance_pln * (risk_percent / 100)
+    
+    # Wyznaczamy poziomy cenowe SL i TP
+    if side == "Long":
+        sl_price = round(price * (1 - sl_percent / 100), 5)
+        tp_price = round(price * (1 + tp_percent / 100), 5)
+    else:
+        sl_price = round(price * (1 + sl_percent / 100), 5)
+        tp_price = round(price * (1 - tp_percent / 100), 5)
+
+    # Obliczamy ilość jednostek (qty) na podstawie odległości do SL
+    price_risk = abs(price - sl_price)
+    if price_risk == 0: return
+    
+    # Ilość w USD, potem przeliczone na jednostki aktywa
+    qty = (risk_amount_pln / USDPLN) / price_risk 
+
+    # Tworzenie transakcji
+    trade = {
+        "symbol": symbol,
+        "side": side,
+        "entry_usd": price,
+        "qty": qty,
+        "sl": sl_price,
+        "tp": tp_price,
+        "status": "OPEN",
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "be_active": False,
+        "high_seen": price,
+        "val_pln": risk_amount_pln,
+        "data": data # Przechowujemy kontekst dla AI
+    }
+
+    st.session_state.journal.append(trade)
+    st.session_state.balance_pln -= risk_amount_pln
+    
+    msg = f"🚀 OTWARTKO {side} na {symbol}\nCena: `{price}`\nSL: `{sl_price}` | TP: `{tp_price}`"
+    add_log(msg)
+    send_telegram(msg)
 # =====================================================
 # 6. INTERFEJS UI + SKANER + WYKRESY (ROZBUDOWANE)
 # =====================================================
@@ -321,53 +368,7 @@ if scan_results:
 # 7. SILNIK TRANSAKCYJNY – BE, TRAILING, SL/TP
 # =====================================================
 
-def execute_trade(symbol, price, side, risk_percent, sl_percent, tp_percent, data):
-    # Sprawdzenie limitu pozycji
-    active_positions = [t for t in st.session_state.journal if t["status"] == "OPEN"]
-    if len(active_positions) >= MAX_POSITIONS:
-        return
 
-    # Obliczenia wielkości pozycji (prosty model)
-    # Ryzyko oparte na procencie balansu konta
-    risk_amount_pln = st.session_state.balance_pln * (risk_percent / 100)
-    
-    # Wyznaczamy poziomy cenowe SL i TP
-    if side == "Long":
-        sl_price = round(price * (1 - sl_percent / 100), 5)
-        tp_price = round(price * (1 + tp_percent / 100), 5)
-    else:
-        sl_price = round(price * (1 + sl_percent / 100), 5)
-        tp_price = round(price * (1 - tp_percent / 100), 5)
-
-    # Obliczamy ilość jednostek (qty) na podstawie odległości do SL
-    price_risk = abs(price - sl_price)
-    if price_risk == 0: return
-    
-    # Ilość w USD, potem przeliczone na jednostki aktywa
-    qty = (risk_amount_pln / USDPLN) / price_risk 
-
-    # Tworzenie transakcji
-    trade = {
-        "symbol": symbol,
-        "side": side,
-        "entry_usd": price,
-        "qty": qty,
-        "sl": sl_price,
-        "tp": tp_price,
-        "status": "OPEN",
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "be_active": False,
-        "high_seen": price,
-        "val_pln": risk_amount_pln,
-        "data": data # Przechowujemy kontekst dla AI
-    }
-
-    st.session_state.journal.append(trade)
-    st.session_state.balance_pln -= risk_amount_pln
-    
-    msg = f"🚀 OTWARTKO {side} na {symbol}\nCena: `{price}`\nSL: `{sl_price}` | TP: `{tp_price}`"
-    add_log(msg)
-    send_telegram(msg)
 st.subheader("📝 Monitoring pozycji")
 
 active = [t for t in st.session_state.journal if t["status"] == "OPEN"]
