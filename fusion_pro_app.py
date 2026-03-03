@@ -37,6 +37,9 @@ def add_log(msg):
     st.session_state.logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
     if len(st.session_state.logs) > 200:
         st.session_state.logs.pop(0)
+        # Dodaj to pod st.session_state.notified_symbols
+if "atr_cache" not in st.session_state: 
+    st.session_state.atr_cache = {}  # Format: {"BTC-USD": (wartość, timestamp)}
 
 def save_trade_to_db(trade):
     clean = {k: v for k, v in trade.items() if k != "data"}
