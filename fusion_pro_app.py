@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 import requests, os, time
 from datetime import datetime, timedelta
 from risk_engine import calculate_risk, calculate_sl_tp, can_open_new_trade, get_atr
-from ai_engine import ai_adjust_params, update_ai_weights
+from ai_engine import ai_adjust_params, update_ai_weights, load_ai_weights
 
 # =====================================================
 # 1. KONFIGURACJA SYSTEMU + TELEGRAM
@@ -32,6 +32,20 @@ if "journal" not in st.session_state: st.session_state.journal = []
 if "balance_pln" not in st.session_state: st.session_state.balance_pln = 4000.0
 if "logs" not in st.session_state: st.session_state.logs = []
 if "notified_symbols" not in st.session_state: st.session_state.notified_symbols = set()
+    if "atr_cache" not in st.session_state: 
+    st.session_state.atr_cache = {}
+
+def get_cached_atr(symbol, interval):
+    now = time.time()
+    if symbol in st.session_state.atr_cache:
+        val, ts = st.session_state.atr_cache[symbol]
+        if now - ts < 300: # Dane ważne przez 5 minut
+            return val
+    
+    new_val = get_atr(symbol, interval)
+    if new_val is not None:
+        st.session_state.atr_cache[symbol] = (new_val, now)
+    return new_val
 
 def add_log(msg):
     st.session_state.logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
