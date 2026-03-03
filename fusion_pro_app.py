@@ -435,6 +435,9 @@ for t in active:
 # 8. AUTO-TRADING (Z trybem działania)
 # =====================================================
 
+# Dodaj to na początku sekcji 8 w fusion_pro_app.py
+if auto_trade:
+    add_log(f"DEBUG: Skaner aktywny, Sentyment: {market_guard}")
 if auto_trade and scan_results and market_guard == "SAFE":
 
     for _, row in df_s.head(mode_params["max_positions"]).iterrows():
