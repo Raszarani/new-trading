@@ -32,8 +32,8 @@ if "journal" not in st.session_state: st.session_state.journal = []
 if "balance_pln" not in st.session_state: st.session_state.balance_pln = 4000.0
 if "logs" not in st.session_state: st.session_state.logs = []
 if "notified_symbols" not in st.session_state: st.session_state.notified_symbols = set()
-    if "atr_cache" not in st.session_state: 
-    st.session_state.atr_cache = {}
+if "atr_cache" not in st.session_state: 
+    st.session_state.atr_cache = {}  # Format: {"SYMBOL": (wartość, timestamp)}
 
 def get_cached_atr(symbol, interval):
     now = time.time()
@@ -391,31 +391,29 @@ for t in active:
                 add_log(f"{t['symbol']} -> BreakEven aktywowany")
 
         # Trailing Stop
-        # Trailing Stop (Systematyczne podnoszenie SL)
+        # Inteligentny Trailing Stop z Cache i AI
         if trailing_toggle:
-            atr_val = get_atr(t["symbol"], interval=interval) # Pobranie zmienności
+            atr_val = get_cached_atr(t["symbol"], interval) 
             if atr_val:
-                # Dystans trailingu oparty na ATR (np. 2.0x ATR)
-                trail_dist = atr_val * 2.0 
+                # Pobieramy wagi z ai_engine.py
+                weights = load_ai_weights()
+                # Dystans = ATR * 2.0 * korekta AI
+                trail_dist = atr_val * 2.0 * weights.get("sl_adjust", 1.0)
                 
                 if t["side"] == "Long":
-                    # Szukamy najwyższej ceny dla pozycji Long
                     if curr_px > t["high_seen"]:
                         t["high_seen"] = curr_px
                     
                     potential_sl = round(curr_px - trail_dist, 5)
-                    # Podnosimy SL tylko jeśli nowy poziom jest wyższy niż obecny
                     if potential_sl > t["sl"]:
                         t["sl"] = potential_sl
                         add_log(f"📈 Trailing UP {t['symbol']}: SL na {t['sl']}")
 
                 elif t["side"] == "Short":
-                    # Szukamy najniższej ceny (używamy pola high_seen jako ekstremum)
                     if curr_px < t["high_seen"]:
                         t["high_seen"] = curr_px
                     
                     potential_sl = round(curr_px + trail_dist, 5)
-                    # Obniżamy SL dla Shorta tylko jeśli nowy poziom jest niższy
                     if potential_sl < t["sl"]:
                         t["sl"] = potential_sl
                         add_log(f"📉 Trailing DOWN {t['symbol']}: SL na {t['sl']}")
