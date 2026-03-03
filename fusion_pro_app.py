@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import requests, os, time
 from datetime import datetime, timedelta
-from risk_engine import calculate_risk, calculate_sl_tp, can_open_new_trade
+from risk_engine import calculate_risk, calculate_sl_tp, can_open_new_trade, get_atr
 from ai_engine import ai_adjust_params, update_ai_weights
 
 # =====================================================
@@ -375,32 +375,34 @@ for t in active:
                 add_log(f"{t['symbol']} -> BreakEven aktywowany")
 
         # Trailing Stop
-        # Trailing Stop (nowy, płynny mechanizm)
-if trailing_toggle:
-    if t["side"] == "Long":
-        if curr_px > t["high_seen"]:
-            t["high_seen"] = curr_px
-            # Obliczamy nowy potencjalny SL (np. 1.5% poniżej szczytu)
-            new_sl = round(curr_px * (1 - sl_v/100), 4)
-            # Podnosimy SL tylko, jeśli nowy jest wyższy od obecnego
-            if new_sl > t["sl"]:
-                t["sl"] = new_sl
-                add_log(f"📈 Trailing UP: {t['symbol']} SL na {t['sl']}")
+        # Trailing Stop (Systematyczne podnoszenie SL)
+        if trailing_toggle:
+            atr_val = get_atr(t["symbol"], interval=interval) # Pobranie zmienności
+            if atr_val:
+                # Dystans trailingu oparty na ATR (np. 2.0x ATR)
+                trail_dist = atr_val * 2.0 
+                
+                if t["side"] == "Long":
+                    # Szukamy najwyższej ceny dla pozycji Long
+                    if curr_px > t["high_seen"]:
+                        t["high_seen"] = curr_px
+                    
+                    potential_sl = round(curr_px - trail_dist, 5)
+                    # Podnosimy SL tylko jeśli nowy poziom jest wyższy niż obecny
+                    if potential_sl > t["sl"]:
+                        t["sl"] = potential_sl
+                        add_log(f"📈 Trailing UP {t['symbol']}: SL na {t['sl']}")
 
-    elif t["side"] == "Short":
-        # Dla Short szukamy najniższej ceny (low_seen)
-        if curr_px < t["high_seen"]: # w kodzie używasz high_seen jako ekstremum
-            t["high_seen"] = curr_px
-            new_sl = round(curr_px * (1 + sl_v/100), 4)
-            # Obniżamy SL tylko, jeśli nowy jest niższy od obecnego
-            if new_sl < t["sl"]:
-                t["sl"] = new_sl
-                add_log(f"📉 Trailing DOWN: {t['symbol']} SL na {t['sl']}")
-
-            elif t["side"] == "Short" and curr_px < t["high_seen"]:
-                t["high_seen"] = curr_px
-                if not t["be_active"]:
-                    t["sl"] = round(curr_px * (1 + sl_v/100), 4)
+                elif t["side"] == "Short":
+                    # Szukamy najniższej ceny (używamy pola high_seen jako ekstremum)
+                    if curr_px < t["high_seen"]:
+                        t["high_seen"] = curr_px
+                    
+                    potential_sl = round(curr_px + trail_dist, 5)
+                    # Obniżamy SL dla Shorta tylko jeśli nowy poziom jest niższy
+                    if potential_sl < t["sl"]:
+                        t["sl"] = potential_sl
+                        add_log(f"📉 Trailing DOWN {t['symbol']}: SL na {t['sl']}")
 
         # Czy osiągnięto SL / TP?
         hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
