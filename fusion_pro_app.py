@@ -227,7 +227,7 @@ trailing_toggle = st.sidebar.toggle("Trailing Stop 📈", True)
 
 assets_raw = st.sidebar.text_area(
     "Skaner",
-    "BTC-USD, ETH-USD, SOL-USD, NVDA, TSLA, PEPE-USD, DOGE-USD, XRP-USD, FET-USD"
+    "BTC-USD, ETH-USD, SOL-USD, NVDA, TSLA, DOGE-USD, XRP-USD, FET-USD"
 )
 ASSETS = [s.strip().upper() for s in assets_raw.split(",") if s.strip()]
 
