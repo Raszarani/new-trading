@@ -105,7 +105,49 @@ def execute_paper_trade(symbol, side, px, context):
     st.session_state.journal.append(trade)
     add_log(f"🤖 AI otwiera {side} na {symbol} po {px}")
     send_telegram(f"🚀 *AUTO-TRADE:* {side} {symbol} @ {px}")
+    
+# =====================================================
+# SEKCJA ANALIZY I SKANERA (Wymuszenie wyświetlania)
+# =====================================================
+st.header("🔍 Analiza Rynku i Akcje AI")
 
+# Pobieranie wyników skanowania
+scan_results = []
+for s in assets:
+    with st.spinner(f"Analizowanie {s}..."):
+        a = get_analysis(s, "5m") # Interwał z Twojego kodu 
+        if a:
+            scan_results.append({
+                "Symbol": s,
+                "Cena": round(a["px"], 4),
+                "Vol": round(a["vol"], 2),
+                "RSI": round(a["rsi"], 1),
+                "Trend": "UP" if a["slope"] > 0 else "DOWN",
+                "data": a
+            })
+
+if scan_results:
+    # 1. Tabela akcji
+    df_scan = pd.DataFrame(scan_results)
+    st.subheader("📈 Aktywne Skanowanie")
+    st.dataframe(df_scan[["Symbol", "Cena", "Vol", "RSI", "Trend"]], use_container_width=True)
+
+    # 2. Wykres techniczny dla pierwszego symbolu
+    target = st.selectbox("Wybierz aktywo do szczegółowej analizy:", [x["Symbol"] for x in scan_results])
+    t_data = next(x["data"] for x in scan_results if x["Symbol"] == target)
+    
+    # Renderowanie wykresu (Candlesticks + Oracle Path) 
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3])
+    fig.add_trace(go.Candlestick(x=t_data["df"].index, open=t_data["df"]["Open"], high=t_data["df"]["High"], 
+                                 low=t_data["df"]["Low"], close=t_data["df"]["Close"], name="Cena"), row=1, col=1)
+    
+    # Dodanie Oracle Path (prognoza AI) 
+    fig.add_trace(go.Scatter(y=t_data["f_y"], mode="lines", name="Oracle Path", line=dict(color="yellow", dash="dot")), row=1, col=1)
+    
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("Nie udało się pobrać danych z Yahoo Finance. Sprawdź połączenie z internetem.")
+    
 # =====================================================
 # UI I PĘTLA GŁÓWNA
 # =====================================================
