@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import requests, os, time
 from datetime import datetime, timedelta
+from risk_engine import calculate_risk, calculate_sl_tp, can_open_new_trade
+from ai_engine import ai_adjust_params, update_ai_weights
 
 # =====================================================
 # 1. KONFIGURACJA SYSTEMU + TELEGRAM
