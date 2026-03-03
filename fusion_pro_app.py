@@ -197,7 +197,7 @@ def get_mode_params(mode):
             "rsi_min_short": 30,
             "trend_strict": False
         }
-    def execute_trade(symbol, price, side, risk_percent, sl_percent, tp_percent, data):
+def execute_trade(symbol, price, side, risk_percent, sl_percent, tp_percent, data):
     # Sprawdzenie limitu pozycji
     active_positions = [t for t in st.session_state.journal if t["status"] == "OPEN"]
     if len(active_positions) >= MAX_POSITIONS:
