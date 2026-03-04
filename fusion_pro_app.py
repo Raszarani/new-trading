@@ -464,6 +464,31 @@ else:
         # Czy osiągnięto SL / TP?
             hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
                   (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
+            # --- AUTOMATYCZNE ZAMYKANIE (SL / TP) ---
+            if hit:
+                reason = "STOP LOSS 🚩" if (t["side"] == "Long" and curr_px <= t["sl"]) or \
+                                         (t["side"] == "Short" and curr_px >= t["sl"]) else "TAKE PROFIT ✅"
+                
+                # 1. Zmiana statusu
+                t["status"] = "CLOSED"
+                
+                # 2. Rozliczenie finansowe (Zwrot wkładu + PNL)
+                st.session_state.balance_pln += (t["val_pln"] + pnl_pln)
+                
+                # 3. Zapis do historii (dla krzywej kapitału i bazy CSV)
+                st.session_state.balance_history.append(st.session_state.balance_pln)
+                
+                t["time_close"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                t["pnl_pln"] = pnl_pln
+                save_trade_to_db(t) # Zapis do pliku CSV
+                
+                # 4. Powiadomienia
+                msg = f"🔔 AUTO-CLOSE: {t['symbol']} @ {curr_px:.4f}\nPowód: {reason}\nWynik: {pnl_pln:.2f} PLN"
+                add_log(msg)
+                send_telegram(msg)
+                
+                # 5. Odświeżenie interfejsu
+                st.rerun()
 
         # 3. Wyświetlanie pozycji
             with st.container():
