@@ -473,16 +473,20 @@ else:
             if hit_sl or hit_tp:
                 reason = "🚩 STOP LOSS" if hit_sl else "✅ TAKE PROFIT"
                 t["status"] = "CLOSED"
-                t["time_close"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                t["pnl_pln"] = pnl_pln
                 
-                # Zwrot środków i zapis do historii
-                st.session_state.balance_pln += (t["val_pln"] + pnl_pln)
+                # Obliczamy końcowy wynik w PLN
+                final_pnl = pnl_pln 
+                
+                # Zwrot środków i zapis
+                st.session_state.balance_pln += (t["val_pln"] + final_pnl)
                 st.session_state.balance_history.append(st.session_state.balance_pln)
                 
-                save_trade_to_db(t)
-                add_log(f"🔔 AUTO-CLOSE: {t['symbol']} @ {curr_px:.2f} ({reason})")
-                send_telegram(f"🔔 *AUTO-CLOSE: {t['symbol']}*\nWynik: {pnl_pln:.2f} PLN\nPowód: {reason}")
+                # --- TUTAJ KLUCZOWA ZMIANA W LOGU ---
+                kolor_logu = "🟢 ZYSK" if final_pnl > 0 else "🔴 STRATA"
+                msg = f"{reason}: {t['symbol']} | {kolor_logu}: {final_pnl:+.2f} PLN | Saldo: {st.session_state.balance_pln:.2f} PLN"
+                
+                add_log(msg)
+                send_telegram(f"🔔 *AUTO-CLOSE: {t['symbol']}*\n{kolor_logu}: {final_pnl:+.2f} PLN\nPowód: {reason}")
                 st.rerun()
 
 
