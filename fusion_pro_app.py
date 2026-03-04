@@ -448,7 +448,7 @@ else:
                   (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
 
         # 3. Wyświetlanie pozycji
-                with st.container():
+            with st.container():
                     c1, c2, c3 = st.columns([4, 4, 2])
                     icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
                 
