@@ -29,7 +29,7 @@ def send_telegram(msg):
 # 2. PAMIĘĆ SYSTEMOWA + BAZA DANYCH
 # =====================================================
 if "journal" not in st.session_state: st.session_state.journal = []
-if "balance_pln" not in st.session_state: st.session_state.balance_pln = 4000.0
+if "balance_pln" not in st.session_state: st.session_state.balance_pln = 100.0
 if "logs" not in st.session_state: st.session_state.logs = []
 if "notified_symbols" not in st.session_state: st.session_state.notified_symbols = set()
 if "atr_cache" not in st.session_state: 
