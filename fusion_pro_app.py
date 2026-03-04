@@ -129,38 +129,52 @@ def get_adaptive_risk():
 # =====================================================
 # 4. ANALIZA – ORACLE PATH, TREND, WOLUMEN, RSI
 # =====================================================
+# =====================================================
+# 4. ANALIZA – ORACLE PATH, TREND, WOLUMEN, RSI
+# =====================================================
 def get_analysis(symbol, interval):
     try:
         df = yf.Ticker(symbol).history(period="2d", interval=interval)
         if len(df) < 20:
             return None
 
-        # RSI
+        # 1. RSI
         delta = df["Close"].diff()
         gain = delta.where(delta > 0, 0).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
         rsi = 100 - (100 / (1 + gain / (loss + 1e-9)))
 
-        # Trend
+        # 2. Trend (Slope)
         y = df["Close"].tail(20).values
-        slope = np.polyfit(np.arange(len(y)), y, 1)[0]
+        x = np.arange(len(y))
+        slope, intercept = np.polyfit(x, y, 1)
 
-        # Volume Spike Index
+        # 3. Volume Spike Index
         vol_idx = df["Volume"].iloc[-1] / (df["Volume"].mean() + 1e-9)
 
-        # Oracle Path – prognoza 12 świec
-        f_y = slope * np.arange(len(y)-1, len(y)+12) + y[-1]
+        # 4. POPRAWIONY ORACLE PATH (Prognoza 12 świec z tłumieniem)
+        forecast_steps = 12
+        last_px = df["Close"].iloc[-1]
+        
+        f_y = []
+        for i in range(1, forecast_steps + 1):
+            # Tłumik: sprawia, że prognoza nie leci w nieskończoność, tylko staje się bardziej płaska
+            damping = 1 / (1 + i * 0.1) 
+            prediction = last_px + (slope * i * damping)
+            f_y.append(prediction)
 
         return {
             "df": df,
-            "px": df["Close"].iloc[-1],
+            "px": last_px,
             "rsi": rsi.iloc[-1],
             "slope": slope,
             "vol": vol_idx,
-            "f_y": f_y
+            "f_y": np.array(f_y) # Zapisujemy jako tablicę dla Plotly
         }
 
-    except:
+    except Exception as e:
+        # Możesz odkomentować linię niżej, żeby widzieć błędy w konsoli:
+        # print(f"Błąd analizy {symbol}: {e}")
         return None
 
 
