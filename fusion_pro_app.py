@@ -557,30 +557,73 @@ c4.metric("💵 USD/PLN", USDPLN)
 # 10. EQUITY CURVE – KRZYWA KAPITAŁU
 # =====================================================
 
-if not history_df.empty:
+# =====================================================
+# 10. EQUITY CURVE – ZAAWANSOWANA KRZYWA KAPITAŁU
+# =====================================================
+st.divider()
+st.subheader("📈 Analiza Wyników (Equity Curve)")
 
-    st.divider()
-    st.subheader("📈 Krzywa Kapitału (Equity Curve)")
-
+# Tworzymy dane do wykresu na podstawie historii sesji
+if "balance_history" in st.session_state and len(st.session_state.balance_history) > 1:
     try:
-        history_df["time_close"] = pd.to_datetime(history_df["time_close"])
-        history_df = history_df.sort_values("time_close")
-        history_df["cum_pnl"] = history_df["pnl_pln"].cumsum()
-
+        # Przygotowanie danych
+        y_values = st.session_state.balance_history
+        x_values = list(range(len(y_values))) # Kroki transakcyjne
+        
+        # Obliczenia statystyczne
+        initial_bal = y_values[0]
+        current_bal = y_values[-1]
+        total_pnl = current_bal - initial_bal
+        return_pct = (total_pnl / initial_bal) * 100
+        
+        # Tworzenie wykresu Plotly
         fig_eq = go.Figure()
+
+        # Linia główna kapitału
         fig_eq.add_trace(go.Scatter(
-            x=history_df["time_close"],
-            y=history_df["cum_pnl"],
-            fill="tozeroy",
+            x=x_values,
+            y=y_values,
+            mode='lines+markers',
+            name="Kapitał (PLN)",
             line=dict(color="#00ffcc", width=3),
-            name="Zysk łączny"
+            fill='tozeroy',
+            fillcolor='rgba(0, 255, 204, 0.1)',
+            hovertemplate="Krok: %{x}<br>Saldo: %{y:.2f} PLN<extra></extra>"
         ))
 
-        fig_eq.update_layout(template="plotly_dark", height=350)
-        st.plotly_chart(fig_eq, width='stretch')
+        # Linia bazowa (startowa)
+        fig_eq.add_shape(
+            type="line", line=dict(color="white", dash="dash", width=1),
+            x0=0, x1=x_values[-1], y0=initial_bal, y1=initial_bal
+        )
 
-    except:
-        st.warning("⚠️ Nie udało się załadować historii transakcji.")
+        fig_eq.update_layout(
+            template="plotly_dark",
+            height=400,
+            margin=dict(l=20, r=20, t=20, b=20),
+            xaxis=dict(title="Liczba operacji (zamknięcia/częściowe)", showgrid=False),
+            yaxis=dict(title="Suma PLN", showgrid=True, gridcolor="rgba(255,255,255,0.1)"),
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(fig_eq, use_container_width=True)
+
+        # Dodatkowe metryki pod wykresem
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Zysk/Strata netto", f"{total_pnl:.2f} PLN", f"{return_pct:+.2f}%")
+        
+        # Obliczanie Drawdownu (największego spadku od szczytu)
+        max_balance = np.maximum.accumulate(y_values)
+        drawdown = ((y_values - max_balance) / max_balance).min() * 100
+        m2.metric("Max Drawdown", f"{drawdown:.2f}%", delta_color="inverse")
+        
+        # Liczba operacji
+        m3.metric("Ilość księgowań", len(y_values) - 1)
+
+    except Exception as e:
+        st.error(f"Błąd generowania wykresu: {e}")
+else:
+    st.info("💡 Krzywa kapitału potrzebuje co najmniej jednego zamknięcia pozycji (lub Partial TP), aby zacząć rysować dane.")
 
 
 # =====================================================
