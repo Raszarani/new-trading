@@ -400,39 +400,39 @@ else:
                     add_log(f"🛡️ {t['symbol']} -> BreakEven aktywowany")
 
        # --- LOGIKA PARTIAL TAKE PROFIT (POŁOWA ZYSKU) ---
-if partial_tp_toggle and not t.get("partial_done", False):
-    # Obliczamy punkt 50% drogi do TP
-    dist_to_tp = abs(t["tp"] - t["entry_usd"])
-    p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
+            if partial_tp_toggle and not t.get("partial_done", False):
+                # Obliczamy punkt 50% drogi do TP
+                dist_to_tp = abs(t["tp"] - t["entry_usd"])
+                p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
 
-    if (t["side"] == "Long" and curr_px >= p_target) or \
-       (t["side"] == "Short" and curr_px <= p_target):
+                if (t["side"] == "Long" and curr_px >= p_target) or \
+                   (t["side"] == "Short" and curr_px <= p_target):
         
-        # 1. OBLICZAMY ZYSK Z POŁOWY POZYCJI
-        # Obliczamy PnL w USD dla 50% ilości (qty)
-        half_qty = t["qty"] * 0.5
-        pnl_usd_half = (curr_px - t["entry_usd"]) * half_qty if t["side"] == "Long" else (t["entry_usd"] - curr_px) * half_qty
+                    # 1. OBLICZAMY ZYSK Z POŁOWY POZYCJI
+                    # Obliczamy PnL w USD dla 50% ilości (qty)
+                    half_qty = t["qty"] * 0.5
+                    pnl_usd_half = (curr_px - t["entry_usd"]) * half_qty if t["side"] == "Long" else (t["entry_usd"] - curr_px) * half_qty
         
-        # 2. AKTUALIZUJEMY SALDO (Zwracamy połowę kapitału + zysk)
-        # Zakładamy, że t["val_pln"] to była całkowita kwota wejścia w PLN
-        entry_val_half = t["val_pln"] * 0.5
-        profit_pln_half = pnl_usd_half * USDPLN
+                    # 2. AKTUALIZUJEMY SALDO (Zwracamy połowę kapitału + zysk)
+                    # Zakładamy, że t["val_pln"] to była całkowita kwota wejścia w PLN
+                    entry_val_half = t["val_pln"] * 0.5
+                    profit_pln_half = pnl_usd_half * USDPLN
         
-        st.session_state.balance_pln += entry_val_half + profit_pln_half
+                    st.session_state.balance_pln += entry_val_half + profit_pln_half
         
-        # --- KLUCZOWY MOMENT DLA KRZYWEJ KAPITAŁU ---
-        st.session_state.balance_history.append(st.session_state.balance_pln)
-        # --------------------------------------------
+                    # --- KLUCZOWY MOMENT DLA KRZYWEJ KAPITAŁU ---
+                    st.session_state.balance_history.append(st.session_state.balance_pln)
+                    # --------------------------------------------
 
-        # 3. REDUKUJEMY POZYCJĘ W PAMIĘCI BOTA
-        t["qty"] = half_qty
-        t["val_pln"] = entry_val_half # Teraz w pozycji zostaje tylko druga połowa kasy
-        t["partial_done"] = True
-        t["sl"] = t["entry_usd"] # Zabezpieczenie na Break Even
+                    # 3. REDUKUJEMY POZYCJĘ W PAMIĘCI BOTA
+                    t["qty"] = half_qty
+                    t["val_pln"] = entry_val_half # Teraz w pozycji zostaje tylko druga połowa kasy
+                    t["partial_done"] = True
+                    t["sl"] = t["entry_usd"] # Zabezpieczenie na Break Even
         
-        msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50%. Zysk {profit_pln_half:.2f} PLN dopisany do wykresu!"
-        add_log(msg)
-        send_telegram(msg)
+                    msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50%. Zysk {profit_pln_half:.2f} PLN dopisany do wykresu!"
+                    add_log(msg)
+                    send_telegram(msg)
         
         # Trailing Stop
         # Inteligentny Trailing Stop z Cache i AI
