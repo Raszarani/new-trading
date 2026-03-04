@@ -357,7 +357,7 @@ if scan_results:
     # Oracle Path forecast
     fig.add_trace(go.Scatter(
         x=f_dts,
-        y=t_data["f_y"],
+        y=[df_p["Close"].iloc[-1]] + list(t_data["f_y"]),
         mode="lines",
         line=dict(color="yellow", dash="dot", width=3),
         name="Oracle Path"
