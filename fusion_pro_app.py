@@ -464,8 +464,9 @@ else:
                     st.session_state.balance_pln += t["val_pln"] + pnl_pln
                     st.rerun()
                     
-        except Exception as e:
-            st.warning(f"Problem z {t['symbol']}: Dane tymczasowo niedostępne")
+        except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
+            st.warning(f"Błąd danych dla {t['symbol']}: {e}")
+            continue
 
 
 # =====================================================
