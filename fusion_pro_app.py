@@ -374,13 +374,18 @@ st.subheader("📝 Monitoring pozycji")
 
 active = [t for t in st.session_state.journal if t["status"] == "OPEN"]
 
-for t in active:
-    try:
-        curr_px = yf.Ticker(t["symbol"]).history(period="1d", interval="1m")["Close"].iloc[-1]
-        t["last_change"] = ((curr_px - t["entry_usd"]) / t["entry_usd"]) * 100
-
-        pnl_pln = (curr_px - t["entry_usd"]) * t["qty"] * USDPLN if t["side"] == "Long" \
-                   else (t["entry_usd"] - curr_px) * t["qty"] * USDPLN
+if not active:
+    st.info("Brak otwartych pozycji.")
+else:
+    for t in active:
+        try:
+            # 1. Pobranie ceny
+            tick = yf.Ticker(t["symbol"])
+            curr_px = tick.fast_info['last_price']
+            
+            # 2. Obliczenia
+            pnl_usd = (curr_px - t["entry_usd"]) * t["qty"] if t["side"] == "Long" else (t["entry_usd"] - curr_px) * t["qty"]
+            pnl_pln = pnl_usd * USDPLN
 
         # Break Even
         if be_toggle and not t["be_active"]:
@@ -445,27 +450,25 @@ for t in active:
         hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
               (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
 
-        # INTERFEJS
-        c1, c2, c3 = st.columns([4, 4, 2])
+        # 3. Wyświetlanie pozycji
+            with st.container():
+                c1, c2, c3 = st.columns([4, 4, 2])
+                icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
+                
+                c1.write(f"**{t['symbol']}** {icon}")
+                c1.write(f"In: `{t['entry_usd']:.4f}` → Teraz: `{curr_px:.4f}`")
+                
+                color = "green" if pnl_pln > 0 else "red"
+                c2.markdown(f"PNL: :{color}[**{pnl_pln:+.2f} zł**]")
+                c2.write(f"SL: `{t['sl']:.4f}` | TP: `{t['tp']:.4f}`")
 
-        icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
-        c1.write(f"**{t['symbol']}** {icon} | Ilość: `{t['qty']:.6f}`")
-        c1.write(f"In: `{t['entry_usd']}` → Teraz: `{curr_px}`")
-
-        c2.write(f"PNL: **{pnl_pln:+.2f} zł**")
-        c2.write(f"SL: `{t['sl']}` | TP: `{t['tp']}`")
-
-        if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}") or hit:
-            t["status"] = "CLOSED"
-            t["pnl_pln"] = pnl_pln
-            st.session_state.balance_pln += t["val_pln"] + pnl_pln
-            save_trade_to_db(t)
-            add_log(f"ZAMKNIĘTO {t['symbol']} wynik {pnl_pln:.2f} zł")
-            send_telegram(f"✅ *ZAMKNIĘTO {t['symbol']}*\nWynik: `{pnl_pln:.2f} PLN`")
-            st.rerun()
-
-    except:
-        continue
+                if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}"):
+                    t["status"] = "CLOSED"
+                    st.session_state.balance_pln += t["val_pln"] + pnl_pln
+                    st.rerun()
+                    
+        except Exception as e:
+            st.warning(f"Problem z {t['symbol']}: Dane tymczasowo niedostępne")
 
 
 # =====================================================
