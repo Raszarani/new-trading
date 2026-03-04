@@ -272,9 +272,10 @@ auto_trade = st.sidebar.toggle("Auto-Trading 🤖", True)
 be_toggle = st.sidebar.toggle("Break-Even 🛡️", True)
 trailing_toggle = st.sidebar.toggle("Trailing Stop 📈", True)
 
-assets_raw = st.sidebar.text_area(
-    "Skaner",
-    "BTC-USD, ETH-USD, SOL-USD, NVDA, TSLA, DOGE-USD, XRP-USD, FET-USD"
+# Znajdź tę linię w okolicy 100-110 i zamień na:
+symbols_input = st.sidebar.text_area(
+    "Symbole (rozdzielone przecinkiem):", 
+    value="BTC-USD, ETH-USD, SOL-USD, BNB-USD, ADA-USD, XRP-USD, DOT-USD, LINK-USD, AVAX-USD, MATIC-USD, DOGE-USD, NEAR-USD, NVDA, TSLA, AAPL, MSFT, AMD, GOOGL, META, AMZN, PLTR, SMCI, JPM, GS, V, XOM, LLY, COST, NFLX, PYPL"
 )
 ASSETS = [s.strip().upper() for s in assets_raw.split(",") if s.strip()]
 
