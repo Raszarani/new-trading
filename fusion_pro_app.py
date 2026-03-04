@@ -383,19 +383,17 @@ else:
             tick = yf.Ticker(t["symbol"])
             curr_px = tick.fast_info['last_price']
             
-            # 2. Obliczenia
+            # 2. Obliczenia bazowe
             pnl_usd = (curr_px - t["entry_usd"]) * t["qty"] if t["side"] == "Long" else (t["entry_usd"] - curr_px) * t["qty"]
             pnl_pln = pnl_usd * USDPLN
 
-        # Break Even
-        if be_toggle and not t["be_active"]:
-            prof = ((curr_px / t["entry_usd"] - 1) * 100) if t["side"] == "Long" \
-                   else ((t["entry_usd"] / curr_px - 1) * 100)
-
-            if prof >= tp_v / 2:
-                t["sl"] = t["entry_usd"]
-                t["be_active"] = True
-                add_log(f"{t['symbol']} -> BreakEven aktywowany")
+        # --- BREAK EVEN ---
+            if be_toggle and not t.get("be_active", False):
+                prof = ((curr_px / t["entry_usd"] - 1) * 100) if t["side"] == "Long" else ((t["entry_usd"] / curr_px - 1) * 100)
+                if prof >= tp_v / 2:
+                    t["sl"] = t["entry_usd"]
+                    t["be_active"] = True
+                    add_log(f"🛡️ {t['symbol']} -> BreakEven aktywowany")
 
         # --- LOGIKA PARTIAL TAKE PROFIT (POŁOWA ZYSKU) ---
         if partial_tp_toggle and not t.get("partial_done", False):
@@ -431,7 +429,6 @@ else:
                 if t["side"] == "Long":
                     if curr_px > t["high_seen"]:
                         t["high_seen"] = curr_px
-                    
                     potential_sl = round(curr_px - trail_dist, 5)
                     if potential_sl > t["sl"]:
                         t["sl"] = potential_sl
