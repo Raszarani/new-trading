@@ -483,9 +483,9 @@ if partial_tp_toggle and not t.get("partial_done", False):
                         st.session_state.balance_history.append(st.session_state.balance_pln)
                         st.rerun()
                     
-        except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
-            st.warning(f"Błąd danych dla {t['symbol']}: {e}")
-            continue
+            except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
+                st.warning(f"Błąd danych dla {t['symbol']}: {e}")
+                continue
 
 
 # =====================================================
