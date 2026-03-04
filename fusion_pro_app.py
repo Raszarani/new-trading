@@ -386,6 +386,8 @@ else:
             # 1. Pobranie ceny
             tick = yf.Ticker(t["symbol"])
             curr_px = tick.fast_info['last_price']
+            if curr_px is None or curr_px <= 0:
+                continue
             
             # 2. Obliczenia bazowe
             pnl_usd = (curr_px - t["entry_usd"]) * t["qty"] if t["side"] == "Long" else (t["entry_usd"] - curr_px) * t["qty"]
@@ -393,44 +395,33 @@ else:
 
         # --- BREAK EVEN ---
             if be_toggle and not t.get("be_active", False):
-                prof = ((curr_px / t["entry_usd"] - 1) * 100) if t["side"] == "Long" else ((t["entry_usd"] / curr_px - 1) * 100)
-                if prof >= tp_v / 2:
+                prof_pct = ((curr_px / t["entry_usd"] - 1) * 100) if t["side"] == "Long" else ((t["entry_usd"] / curr_px - 1) * 100)
+                if prof_pct >= tp_v / 2:
                     t["sl"] = t["entry_usd"]
                     t["be_active"] = True
-                    add_log(f"🛡️ {t['symbol']} -> BreakEven aktywowany")
+                    add_log(f"🛡️ BE: {t['symbol']} zabezpieczony na cenie wejścia.")
 
        # --- LOGIKA PARTIAL TAKE PROFIT (POŁOWA ZYSKU) ---
             if partial_tp_toggle and not t.get("partial_done", False):
-                # Obliczamy punkt 50% drogi do TP
                 dist_to_tp = abs(t["tp"] - t["entry_usd"])
                 p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
-
-                if (t["side"] == "Long" and curr_px >= p_target) or \
-                   (t["side"] == "Short" and curr_px <= p_target):
-        
-                    # 1. OBLICZAMY ZYSK Z POŁOWY POZYCJI
-                    # Obliczamy PnL w USD dla 50% ilości (qty)
+                
+                is_ptp = (t["side"] == "Long" and curr_px >= p_target) or (t["side"] == "Short" and curr_px <= p_target)
+                if is_ptp:
                     half_qty = t["qty"] * 0.5
-                    pnl_usd_half = (curr_px - t["entry_usd"]) * half_qty if t["side"] == "Long" else (t["entry_usd"] - curr_px) * half_qty
-        
-                    # 2. AKTUALIZUJEMY SALDO (Zwracamy połowę kapitału + zysk)
-                    # Zakładamy, że t["val_pln"] to była całkowita kwota wejścia w PLN
-                    entry_val_half = t["val_pln"] * 0.5
-                    profit_pln_half = pnl_usd_half * USDPLN
-        
-                    st.session_state.balance_pln += entry_val_half + profit_pln_half
-        
-                    # --- KLUCZOWY MOMENT DLA KRZYWEJ KAPITAŁU ---
+                    pnl_half_pln = (pnl_usd * 0.5) * USDPLN
+                    
+                    # Księgowanie połowy do balansu i historii
+                    st.session_state.balance_pln += (t["val_pln"] * 0.5) + pnl_half_pln
                     st.session_state.balance_history.append(st.session_state.balance_pln)
-                    # --------------------------------------------
-
-                    # 3. REDUKUJEMY POZYCJĘ W PAMIĘCI BOTA
+                    
+                    # Redukcja pozycji w pamięci
                     t["qty"] = half_qty
-                    t["val_pln"] = entry_val_half # Teraz w pozycji zostaje tylko druga połowa kasy
+                    t["val_pln"] = t["val_pln"] * 0.5
                     t["partial_done"] = True
-                    t["sl"] = t["entry_usd"] # Zabezpieczenie na Break Even
-        
-                    msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50%. Zysk {profit_pln_half:.2f} PLN dopisany do wykresu!"
+                    t["sl"] = t["entry_usd"] # Przesuwamy na BE po PTP
+                    
+                    add_log(f"💰 PTP: {t['symbol']} - Połowa zamknięta, zysk zaksięgowany.")
                     add_log(msg)
                     send_telegram(msg)
         
@@ -462,55 +453,48 @@ else:
                         add_log(f"📉 Trailing DOWN {t['symbol']}: SL na {t['sl']}")
 
         # Czy osiągnięto SL / TP?
-            hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
-                  (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
-            # --- AUTOMATYCZNE ZAMYKANIE (SL / TP) ---
-            if hit:
-                reason = "STOP LOSS 🚩" if (t["side"] == "Long" and curr_px <= t["sl"]) or \
-                                         (t["side"] == "Short" and curr_px >= t["sl"]) else "TAKE PROFIT ✅"
-                
-                # 1. Zmiana statusu
+            hit_sl = (t["side"] == "Long" and curr_px <= t["sl"]) or (t["side"] == "Short" and curr_px >= t["sl"])
+            hit_tp = (t["side"] == "Long" and curr_px >= t["tp"]) or (t["side"] == "Short" and curr_px <= t["tp"])
+
+            if hit_sl or hit_tp:
+                reason = "🚩 STOP LOSS" if hit_sl else "✅ TAKE PROFIT"
                 t["status"] = "CLOSED"
-                
-                # 2. Rozliczenie finansowe (Zwrot wkładu + PNL)
-                st.session_state.balance_pln += (t["val_pln"] + pnl_pln)
-                
-                # 3. Zapis do historii (dla krzywej kapitału i bazy CSV)
-                st.session_state.balance_history.append(st.session_state.balance_pln)
-                
                 t["time_close"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 t["pnl_pln"] = pnl_pln
-                save_trade_to_db(t) # Zapis do pliku CSV
                 
-                # 4. Powiadomienia
-                msg = f"🔔 AUTO-CLOSE: {t['symbol']} @ {curr_px:.4f}\nPowód: {reason}\nWynik: {pnl_pln:.2f} PLN"
-                add_log(msg)
-                send_telegram(msg)
+                # Zwrot środków i zapis do historii
+                st.session_state.balance_pln += (t["val_pln"] + pnl_pln)
+                st.session_state.balance_history.append(st.session_state.balance_pln)
                 
-                # 5. Odświeżenie interfejsu
+                save_trade_to_db(t)
+                add_log(f"🔔 AUTO-CLOSE: {t['symbol']} @ {curr_px:.2f} ({reason})")
+                send_telegram(f"🔔 *AUTO-CLOSE: {t['symbol']}*\nWynik: {pnl_pln:.2f} PLN\nPowód: {reason}")
                 st.rerun()
+
+
 
         # 3. Wyświetlanie pozycji
             with st.container():
-                    c1, c2, c3 = st.columns([4, 4, 2])
-                    icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
+                c1, c2, c3 = st.columns([4, 4, 2])
+                p_tag = " 💰" if t.get("partial_done") else ""
+                icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
                 
-                    c1.write(f"**{t['symbol']}** {icon}")
-                    c1.write(f"In: `{t['entry_usd']:.4f}` → Teraz: `{curr_px:.4f}`")
+                c1.write(f"**{t['symbol']}** {icon}{p_tag}")
+                c1.write(f"Wejście: `{t['entry_usd']:.4f}` | Teraz: `{curr_px:.4f}`")
                 
-                    color = "green" if pnl_pln > 0 else "red"
-                    c2.markdown(f"PNL: :{color}[**{pnl_pln:+.2f} zł**]")
-                    c2.write(f"SL: `{t['sl']:.4f}` | TP: `{t['tp']:.4f}`")
+                color = "green" if pnl_pln > 0 else "red"
+                c2.markdown(f"PNL: :{color}[**{pnl_pln:+.2f} zł**]")
+                c2.write(f"SL: `{t['sl']:.4f}` | TP: `{t['tp']:.4f}`")
 
-                    if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}"):
-                        t["status"] = "CLOSED"
-                        st.session_state.balance_pln += t["val_pln"] + pnl_pln
-                        st.session_state.balance_history.append(st.session_state.balance_pln)
-                        st.rerun()
-                    
-        except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
-                st.warning(f"Błąd danych dla {t['symbol']}: {e}")
-                continue
+                if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}"):
+                    t["status"] = "CLOSED"
+                    st.session_state.balance_pln += (t["val_pln"] + pnl_pln)
+                    st.session_state.balance_history.append(st.session_state.balance_pln)
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Błąd monitoringu {t.get('symbol', 'Unknown')}: {e}")
+            continue
 
 
 # =====================================================
