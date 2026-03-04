@@ -271,6 +271,7 @@ tp_v = st.sidebar.slider("Take Profit (%)", 1.0, 20.0, 5.0)
 auto_trade = st.sidebar.toggle("Auto-Trading 🤖", True)
 be_toggle = st.sidebar.toggle("Break-Even 🛡️", True)
 trailing_toggle = st.sidebar.toggle("Trailing Stop 📈", True)
+partial_tp_toggle = st.sidebar.toggle("Partial Take Profit 💰", True)
 
 # Znajdź tę linię w okolicy 100-110 i zamień na:
 assets_raw = st.sidebar.text_area(
