@@ -392,6 +392,27 @@ for t in active:
                 t["be_active"] = True
                 add_log(f"{t['symbol']} -> BreakEven aktywowany")
 
+        # --- LOGIKA PARTIAL TAKE PROFIT (POŁOWA ZYSKU) ---
+        if partial_tp_toggle and not t.get("partial_done", False):
+            # Obliczamy punkt 50% drogi do TP
+            dist_to_tp = abs(t["tp"] - t["entry_usd"])
+            # Dla Long: cena wejścia + połowa dystansu | Dla Short: cena wejścia - połowa dystansu
+            p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
+
+            if (t["side"] == "Long" and curr_px >= p_target) or \
+               (t["side"] == "Short" and curr_px <= p_target):
+                
+                # Wirtualna sprzedaż połowy
+                t["qty"] = t["qty"] * 0.5
+                t["partial_done"] = True
+                
+                # Automatyczne zabezpieczenie na Break Even (żeby już nie stracić)
+                t["sl"] = t["entry_usd"]
+                
+                msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50% pozycji. Reszta zabezpieczona na BE (wejście)!"
+                add_log(msg)
+                send_telegram(msg)
+        
         # Trailing Stop
         # Inteligentny Trailing Stop z Cache i AI
         if trailing_toggle:
