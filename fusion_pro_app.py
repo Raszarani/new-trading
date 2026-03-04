@@ -396,35 +396,35 @@ else:
                     add_log(f"🛡️ {t['symbol']} -> BreakEven aktywowany")
 
         # --- LOGIKA PARTIAL TAKE PROFIT (POŁOWA ZYSKU) ---
-        if partial_tp_toggle and not t.get("partial_done", False):
-            # Obliczamy punkt 50% drogi do TP
-            dist_to_tp = abs(t["tp"] - t["entry_usd"])
-            # Dla Long: cena wejścia + połowa dystansu | Dla Short: cena wejścia - połowa dystansu
-            p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
+            if partial_tp_toggle and not t.get("partial_done", False):
+                # Obliczamy punkt 50% drogi do TP
+                dist_to_tp = abs(t["tp"] - t["entry_usd"])
+                # Dla Long: cena wejścia + połowa dystansu | Dla Short: cena wejścia - połowa dystansu
+                p_target = t["entry_usd"] + (dist_to_tp * 0.5) if t["side"] == "Long" else t["entry_usd"] - (dist_to_tp * 0.5)
 
-            if (t["side"] == "Long" and curr_px >= p_target) or \
-               (t["side"] == "Short" and curr_px <= p_target):
+                if (t["side"] == "Long" and curr_px >= p_target) or \
+                   (t["side"] == "Short" and curr_px <= p_target):
                 
-                # Wirtualna sprzedaż połowy
-                t["qty"] = t["qty"] * 0.5
-                t["partial_done"] = True
+                    # Wirtualna sprzedaż połowy
+                    t["qty"] = t["qty"] * 0.5
+                    t["partial_done"] = True
                 
-                # Automatyczne zabezpieczenie na Break Even (żeby już nie stracić)
-                t["sl"] = t["entry_usd"]
+                    # Automatyczne zabezpieczenie na Break Even (żeby już nie stracić)
+                    t["sl"] = t["entry_usd"]
                 
-                msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50% pozycji. Reszta zabezpieczona na BE (wejście)!"
-                add_log(msg)
-                send_telegram(msg)
+                    msg = f"💰 PARTIAL TP: {t['symbol']} - Sprzedano 50% pozycji. Reszta zabezpieczona na BE (wejście)!"
+                    add_log(msg)
+                    send_telegram(msg)
         
         # Trailing Stop
         # Inteligentny Trailing Stop z Cache i AI
-        if trailing_toggle:
-            atr_val = get_cached_atr(t["symbol"], interval) 
-            if atr_val:
-                # Pobieramy wagi z ai_engine.py
-                weights = load_ai_weights()
-                # Dystans = ATR * 2.0 * korekta AI
-                trail_dist = atr_val * 2.0 * weights.get("sl_adjust", 1.0)
+            if trailing_toggle:
+                atr_val = get_cached_atr(t["symbol"], interval) 
+                if atr_val:
+                    # Pobieramy wagi z ai_engine.py
+                    weights = load_ai_weights()
+                    # Dystans = ATR * 2.0 * korekta AI
+                    trail_dist = atr_val * 2.0 * weights.get("sl_adjust", 1.0)
                 
                 if t["side"] == "Long":
                     if curr_px > t["high_seen"]:
@@ -464,7 +464,7 @@ else:
                     st.session_state.balance_pln += t["val_pln"] + pnl_pln
                     st.rerun()
                     
-        except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
+    except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
             st.warning(f"Błąd danych dla {t['symbol']}: {e}")
             continue
 
