@@ -241,7 +241,7 @@ def execute_trade(symbol, price, side, risk_percent, sl_percent, tp_percent, dat
     st.session_state.journal.append(trade)
     st.session_state.balance_pln -= risk_amount_pln
     
-    msg = f"🚀 OTWARTKO {side} na {symbol}\nCena: `{price}`\nSL: `{sl_price}` | TP: `{tp_price}`"
+    msg = f"🚀 OTWARTO {side} na {symbol}\nCena: `{price}`\nSL: `{sl_price}` | TP: `{tp_price}`"
     add_log(msg)
     send_telegram(msg)
 # =====================================================
