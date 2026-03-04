@@ -444,25 +444,25 @@ else:
                         add_log(f"📉 Trailing DOWN {t['symbol']}: SL na {t['sl']}")
 
         # Czy osiągnięto SL / TP?
-        hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
-              (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
+            hit = (t["side"] == "Long" and (curr_px <= t["sl"] or curr_px >= t["tp"])) or \
+                  (t["side"] == "Short" and (curr_px >= t["sl"] or curr_px <= t["tp"]))
 
         # 3. Wyświetlanie pozycji
-            with st.container():
-                c1, c2, c3 = st.columns([4, 4, 2])
-                icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
+                with st.container():
+                    c1, c2, c3 = st.columns([4, 4, 2])
+                    icon = "🟢 LONG" if t["side"] == "Long" else "🔴 SHORT"
                 
-                c1.write(f"**{t['symbol']}** {icon}")
-                c1.write(f"In: `{t['entry_usd']:.4f}` → Teraz: `{curr_px:.4f}`")
+                    c1.write(f"**{t['symbol']}** {icon}")
+                    c1.write(f"In: `{t['entry_usd']:.4f}` → Teraz: `{curr_px:.4f}`")
                 
-                color = "green" if pnl_pln > 0 else "red"
-                c2.markdown(f"PNL: :{color}[**{pnl_pln:+.2f} zł**]")
-                c2.write(f"SL: `{t['sl']:.4f}` | TP: `{t['tp']:.4f}`")
+                    color = "green" if pnl_pln > 0 else "red"
+                    c2.markdown(f"PNL: :{color}[**{pnl_pln:+.2f} zł**]")
+                    c2.write(f"SL: `{t['sl']:.4f}` | TP: `{t['tp']:.4f}`")
 
-                if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}"):
-                    t["status"] = "CLOSED"
-                    st.session_state.balance_pln += t["val_pln"] + pnl_pln
-                    st.rerun()
+                    if c3.button("ZAMKNIJ", key=f"close_{t['symbol']}_{t['time']}"):
+                        t["status"] = "CLOSED"
+                        st.session_state.balance_pln += t["val_pln"] + pnl_pln
+                        st.rerun()
                     
     except Exception as e: # --- KONIEC BLOKU TRY I OBSŁUGA BŁĘDU ---
             st.warning(f"Błąd danych dla {t['symbol']}: {e}")
